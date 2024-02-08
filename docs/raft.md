@@ -38,6 +38,18 @@ Hearbeats are used to initiate leader electinos. When servers start up, they alw
 
 A follower begins an election by incrementing its current term and transitions to the candidate states. It votes for itself and sends RPCs in parallel to each of the other server in the clusters. Candidates continue in this state until one of three things happen:
 
-1. It wins the election and becomes leader
-2. Another server becomes leader
-3. No leader is elected
+##### 1. It wins the election and becomes leader
+
+Candidates win an election by receiving the majority of votes in the full cluster for the same term. Each server will vote for at most one (slow servers can be ignored if majority can be reached, therefore not all need to send a vote). The decision of who to vote for is whomever's vote first is received. If you win, you become leader, and you start by sending hearbets to the rest of the cluster.
+
+##### 2. Another server becomes leader
+
+When waiting for votes as a candidate, it is possible that a heartbeat is received, which indicates that the senders is leader. If the leader's term is at least equal to your current term, then you recognize it as legitimate leader and returns to the follower state. If the term is smaller, you reject the RPC and continue as a candidate.
+
+##### 3. No leader is elected
+
+Candidates sometimes neither win or lose, this can happen when a lot of followers become candidates, and it ends up in a split vote. If this happens, everyone will timeout, and a new term and election is started.
+
+To avoid split votes, randomized election timeouts are used, which in most cases ends up in usually only one server times out. In this way, it is very likely that they will become leader without competition.
+
+### Log replication
